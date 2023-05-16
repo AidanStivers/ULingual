@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 
-const Participant = ({ participant, localParticipantIdentity }) => {
+const Participant = ({ participant, localParticipantIdentity, isAudioOn }) => {
   // State variables to store the video and audio tracks
   const [videoTracks, setVideoTracks] = useState([]);
   const [audioTracks, setAudioTracks] = useState([]);
@@ -8,6 +8,7 @@ const Participant = ({ participant, localParticipantIdentity }) => {
   const videoRef = useRef();
   const audioRef = useRef();
 
+  console.log("isAudioOn: " + isAudioOn);
   const trackpubsToTracks = (trackMap) =>
     Array.from(trackMap.values())
       .map((publication) => publication.track)
@@ -70,7 +71,7 @@ const Participant = ({ participant, localParticipantIdentity }) => {
     <div className="participant">
       <h3>{participant.identity}</h3>
       <video ref={videoRef} autoPlay={true} id={participant.identity === localParticipantIdentity ? "local-video" : "remote-video"} />
-      <audio ref={audioRef} autoPlay={true} muted={true} />
+      <audio ref={audioRef} autoPlay={true} muted={isAudioOn} />
     </div>
   );
 };

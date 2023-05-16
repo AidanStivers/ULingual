@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useState } from "react";
 import Participant from "./Participant";
-import Video from "twilio-video";
+import { Video, LocalDataTrack } from "twilio-video";
 
 const Room = ({ roomName, room, handleLogout, }) => {
   const [participants, setParticipants] = useState([]);
   const [isVideoOn, setIsVideoOn] = useState(true);
+  const [isAudioOn, setIsAudioOn] = useState(true);
 
   useEffect(() => {
     // When a participant connects, the participantConnected function is called and the participant is added to the participants array.
@@ -33,6 +34,7 @@ const Room = ({ roomName, room, handleLogout, }) => {
     };
   }, [room]);
 
+
   // Map each participant to a Participant component
   const remoteParticipants = participants.map((participant) => (
     <Participant key={participant.sid} participant={participant} />
@@ -60,25 +62,23 @@ const Room = ({ roomName, room, handleLogout, }) => {
           room.localParticipant.unpublishTrack(localVideoTrack);
           localVideoTrack.disable();
           setIsVideoOn(false);
-          /*
-          const localVideoElement = document.getElementById('local-video');
-          if (localVideoElement) {
-            localVideoElement.srcObject = null; // Set the srcObject property to null
-            localVideoElement.poster = 'https://www.w3schools.com/w3images/fjords.jpg'; // Set the poster property to the placeholder image
-          }
-          */
+          const localDataTrack = new LocalDataTrack();
+          room.localParticipant.publishTrack(localDataTrack);
+          localDataTrack.send(JSON.stringify({ type: 'videoOff' })); // Send a message to remote participants indicating that your video is turned off
+
         }
       } else {
         const newLocalVideoTrack = await createLocalVideoTrack();
         if (newLocalVideoTrack) {
+          const localDataTrack = room.localParticipant.dataTracks.values().next().value.track;
+          room.localParticipant.unpublishTrack(localDataTrack);
           room.localParticipant.publishTrack(newLocalVideoTrack);
           setIsVideoOn(true);
-          
+
           const localVideoElement = document.getElementById('local-video');
           if (localVideoElement) {
             const newMediaStream = new MediaStream([newLocalVideoTrack.mediaStreamTrack]);
             localVideoElement.srcObject = newMediaStream;
-            localVideoElement.poster = null; // Set the poster property to null
           }
 
         }
@@ -87,6 +87,20 @@ const Room = ({ roomName, room, handleLogout, }) => {
     }
   }, [room, isVideoOn]);
 
+
+  const toggleAudio = useCallback(() => {
+    if (room) {
+      console.log("isAudioOn: " + isAudioOn);
+      const localAudioTrack = room.localParticipant.audioTracks.values().next().value.track;
+      if (isAudioOn) {
+        localAudioTrack.disable();
+        setIsAudioOn(false);
+      } else {
+        localAudioTrack.enable();
+        setIsAudioOn(true);
+      }
+    }
+  }, [room, isAudioOn]);
 
   /*
   const toggleCamera = useCallback(() => {
@@ -114,12 +128,14 @@ const Room = ({ roomName, room, handleLogout, }) => {
       <h2>Room: {roomName}</h2>
       <button onClick={handleLogout}>Log out</button>
       <button onClick={toggleCamera}> {isVideoOn ? "Turn Video Off" : "Turn Video On"}</button>
+      <button onClick={toggleAudio}> {isAudioOn ? "Turn Audio Off" : "Turn Audio On"}</button>
       <div className="local-participant">
         {room ? (
           <Participant
             key={room.localParticipant.sid}
             participant={room.localParticipant}
             localParticipantIdentity={room.localParticipant.identity}
+            isAudioOn={isAudioOn}
           />
         ) : (
           ""
